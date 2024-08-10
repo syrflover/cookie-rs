@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use http::{
-    header::{self, HeaderName, HeaderValue},
+    header::{self, HeaderName, HeaderValue, InvalidHeaderValue},
     HeaderMap,
 };
 use itertools::Itertools;
@@ -140,6 +140,22 @@ impl<'a> FromIterator<(&'a str, String)> for Cookie {
 impl<'a> FromIterator<(String, &'a str)> for Cookie {
     fn from_iter<T: IntoIterator<Item = (String, &'a str)>>(iter: T) -> Self {
         Self::from_iter(iter.into_iter().map(|(key, value)| (key, value.to_owned())))
+    }
+}
+
+impl TryInto<HeaderValue> for Cookie {
+    type Error = InvalidHeaderValue;
+
+    fn try_into(self) -> Result<HeaderValue, Self::Error> {
+        (&self).try_into()
+    }
+}
+
+impl<'a> TryInto<HeaderValue> for &'a Cookie {
+    type Error = InvalidHeaderValue;
+
+    fn try_into(self) -> Result<HeaderValue, Self::Error> {
+        self.to_str().try_into()
     }
 }
 
