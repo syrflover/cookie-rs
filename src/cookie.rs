@@ -23,8 +23,11 @@ impl Cookie {
     /// - if failed to parse cookie
     pub fn from_headers(header_name: HeaderName, headers: &HeaderMap) -> Option<Self> {
         if let header::COOKIE = header_name {
-            let x = headers.get(header_name)?;
-            return Cookie::from_cookie(x);
+            let x = headers.get(header_name);
+            return match x {
+                Some(x) => Cookie::from_cookie(x),
+                None => Some(Cookie::new()),
+            };
         }
 
         if let header::SET_COOKIE = header_name {
