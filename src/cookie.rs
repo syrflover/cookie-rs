@@ -1,3 +1,8 @@
+#[cfg(feature = "axum-extractor")]
+pub mod axum;
+#[cfg(feature = "poem-extractor")]
+pub mod poem;
+
 use std::collections::HashMap;
 
 use http::{
@@ -81,7 +86,7 @@ impl Cookie {
     }
 
     pub fn get(&self, key: &str) -> Option<&str> {
-        self.inner.get(key).map(|st| st as &str)
+        self.inner.get(key).map(|st| &**st)
     }
 
     pub fn get2(&self, key1: &str, key2: &str) -> Option<(&str, &str)> {
@@ -150,7 +155,7 @@ impl TryInto<HeaderValue> for Cookie {
     type Error = InvalidHeaderValue;
 
     fn try_into(self) -> Result<HeaderValue, Self::Error> {
-        (&self).try_into()
+        self.into_str().try_into()
     }
 }
 

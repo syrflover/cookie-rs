@@ -202,6 +202,13 @@ impl SetCookie {
             .map(|(key, (value, options))| fmt(key, value, options))
             .map(|st| (header::SET_COOKIE, st.parse().unwrap()))
     }
+
+    pub fn into_iter(self) -> impl Iterator<Item = (HeaderName, HeaderValue)> {
+        self.inner
+            .into_iter()
+            .map(|(key, (value, options))| fmt(&key, &value, &options))
+            .map(|st| (header::SET_COOKIE, st.parse().unwrap()))
+    }
 }
 
 fn fmt(
@@ -216,30 +223,79 @@ fn fmt(
         same_site,
     }: &SetCookieOptions,
 ) -> String {
-    let mut base = format!("{}={}", key, value);
+    let max_age = max_age.map(|x| x.to_string());
+    let same_site = same_site.map(|x| x.as_str());
+
+    let capacity = 1
+        + key.len()
+        + value.len()
+        + domain.as_deref().map(|x| 2 + 6 + x.len()).unwrap_or(0)
+        + max_age.as_deref().map(|x| 2 + 7 + x.len()).unwrap_or(0)
+        + path.as_deref().map(|x| 2 + 4 + x.len()).unwrap_or(0)
+        + same_site.map(|x| 2 + 8 + x.len()).unwrap_or(0)
+        + if *http_only { 1 + 8 } else { 0 }
+        + if *secure { 1 + 6 } else { 0 };
+
+    let mut base = String::with_capacity(capacity);
+
+    base.push_str(key);
+    base.push('=');
+    base.push_str(value);
+
+    // let mut base = format!("{}={}", key, value);
 
     if let Some(domain) = domain {
-        base = format!("{}; Domain={}", base, domain);
+        // base = format!("{}; Domain={}", base, domain);
+        base.push(';');
+
+        base.push_str("Domain=");
+        base.push_str(domain);
     }
 
     if let Some(max_age) = max_age {
-        base = format!("{}; Max-Age={}", base, max_age);
+        // base = format!("{}; Max-Age={}", base, max_age);
+        base.push(';');
+
+        base.push_str("Max-Age=");
+        base.push_str(&max_age);
     }
 
     if let Some(path) = path {
-        base = format!("{}; Path={}", base, path);
+        // base = format!("{}; Path={}", base, path);
+        base.push(';');
+
+        base.push_str("Path=");
+        base.push_str(&path);
     }
 
     if let Some(same_site) = same_site {
-        base = format!("{}; SameSite={}", base, same_site.as_str())
+        // base = format!("{}; SameSite={}", base, same_site.as_str())
+        base.push(';');
+
+        base.push_str("SameSite=");
+        base.push_str(same_site);
     }
 
     if *http_only {
-        base = format!("{}; HttpOnly", base);
+        // base = format!("{}; HttpOnly", base);
+        base.push(';');
+
+        base.push_str("HttpOnly");
     }
 
     if *secure {
-        base = format!("{}; Secure", base);
+        // base = format!("{}; Secure", base);
+        base.push(';');
+
+        base.push_str("Secure");
+    }
+
+    #[cfg(debug_assertions)]
+    {
+        // assert_eq!(capacity, base.len());
+        if capacity != base.len() {
+            tracing::warn!("capacity != base.len() : {} != {}", capacity, base.len());
+        }
     }
 
     base
@@ -309,4 +365,21 @@ fn set_cookie_from_header_values() {
     );
 
     assert_eq!(set_cookie, expected);
+}
+
+#[test]
+fn to_headers() {
+    let set_cookie = SetCookie::new().set(
+        "key1",
+        "key2",
+        SetCookieOptions::new()
+            .domain("example.com")
+            .path("/dasdj/ed")
+            .max_age(4432483)
+            .secure(true)
+            .http_only(true)
+            .same_site(SameSite::Strict),
+    );
+
+    let _r = set_cookie.into_iter().collect::<Vec<_>>();
 }

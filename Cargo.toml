@@ -7,9 +7,13 @@ edition = "2021"
 
 [features]
 poem-extractor = ["dep:poem"]
+axum-extractor = ["dep:axum", "dep:async-trait"]
 
 [dependencies]
 poem = { version = "3.0", default-features = false, optional = true }
+axum = { version = "0.7", default-features = false, optional = true }
+async-trait = { version = "0.1", optional = true }
 thiserror = "1.0"
 http = "1.1"
 itertools = "0.13"
+tracing = "0.1"
