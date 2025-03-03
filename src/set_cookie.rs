@@ -1,8 +1,11 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::{HashMap, hash_map},
+    str::FromStr,
+};
 
 use http::{
-    header::{self, HeaderName},
     HeaderMap, HeaderValue,
+    header::{self, HeaderName},
 };
 
 #[cfg_attr(test, derive(PartialEq))]
@@ -202,12 +205,31 @@ impl SetCookie {
             .map(|(key, (value, options))| fmt(key, value, options))
             .map(|st| (header::SET_COOKIE, st.parse().unwrap()))
     }
+}
 
-    pub fn into_iter(self) -> impl Iterator<Item = (HeaderName, HeaderValue)> {
-        self.inner
-            .into_iter()
-            .map(|(key, (value, options))| fmt(&key, &value, &options))
-            .map(|st| (header::SET_COOKIE, st.parse().unwrap()))
+pub struct IntoIter {
+    inner: hash_map::IntoIter<String, (String, SetCookieOptions)>,
+}
+
+impl Iterator for IntoIter {
+    type Item = (HeaderName, HeaderValue);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (key, (value, options)) = self.inner.next()?;
+        let set_cookie = fmt(&key, &value, &options).parse().ok()?;
+
+        Some((header::SET_COOKIE, set_cookie))
+    }
+}
+
+impl IntoIterator for SetCookie {
+    type IntoIter = IntoIter;
+    type Item = (HeaderName, HeaderValue);
+
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter {
+            inner: self.inner.into_iter(),
+        }
     }
 }
 
@@ -265,7 +287,7 @@ fn fmt(
         base.push(';');
 
         base.push_str("Path=");
-        base.push_str(&path);
+        base.push_str(path);
     }
 
     if let Some(same_site) = same_site {
@@ -321,7 +343,7 @@ where
             // println!("options = {:?}", options);
             // println!("key_value = {:?}", key_value);
 
-            let mut key_value = key_value.get(0).map(|st| st.split('='));
+            let mut key_value = key_value.first().map(|st| st.split('='));
 
             let key = key_value.as_mut().and_then(|st| st.next());
             let value = key_value.as_mut().and_then(|st| st.next());
@@ -347,7 +369,7 @@ where
 fn set_cookie_from_header_values() {
     let header_value = "key=value; Max-Age=12345; Domain=eeee.com; HttpOnly; Secure; Path=/abcd/e";
 
-    let it = vec![header_value];
+    let it = [header_value];
 
     let set_cookie = SetCookie::from(it.iter());
 
