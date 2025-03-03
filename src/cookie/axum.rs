@@ -26,7 +26,6 @@ impl IntoResponse for CookieRejection {
     }
 }
 
-#[async_trait::async_trait]
 impl<S> FromRequestParts<S> for Cookie
 where
     S: Send + Sync,

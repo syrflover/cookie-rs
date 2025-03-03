@@ -6,8 +6,8 @@ pub mod poem;
 use std::collections::HashMap;
 
 use http::{
-    header::{self, HeaderName, HeaderValue, InvalidHeaderValue},
     HeaderMap,
+    header::{self, HeaderName, HeaderValue, InvalidHeaderValue},
 };
 use itertools::Itertools;
 
@@ -159,7 +159,7 @@ impl TryInto<HeaderValue> for Cookie {
     }
 }
 
-impl<'a> TryInto<HeaderValue> for &'a Cookie {
+impl TryInto<HeaderValue> for &Cookie {
     type Error = InvalidHeaderValue;
 
     fn try_into(self) -> Result<HeaderValue, Self::Error> {
